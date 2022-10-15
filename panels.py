@@ -1,13 +1,15 @@
-from PyQt6.QtWidgets import QFrame, QPushButton, QVBoxLayout, QFileDialog, QListWidget, QLabel, QHBoxLayout
-from PyQt6.QtCore import QUrl
-from PyQt6.QtGui import QIcon, QImage
+from PyQt6.QtWidgets import QFrame, QPushButton, QVBoxLayout, QFileDialog, QListWidget, QLabel, QHBoxLayout, QSlider
+from PyQt6.QtCore import QUrl, Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtMultimedia import QMediaPlayer
 from tinytag import TinyTag
 from math import floor
+from win32api import GetSystemMetrics
 import subprocess
 import os
 
 MAIN_WINDOW_HEIGHT_PERCENT = 0.6
+SLIDER_WIDTH_PERCENT = 0.3
 BUTTON_PLAYER_SIZES = (40, 40)
 
 
@@ -48,9 +50,24 @@ class TrackPlayPanel(QFrame):
         self.setObjectName("player")
         self.setStyleSheet("#player {border:1px solid rgb(0, 0, 0); }")
         self.player = player
+        self.player.positionChanged.connect(self.change_slider)
         self.isTrackPlayed = False
-        
+        self.isNeedMoved = True
+
         self.label = QLabel()
+        self.test_label = QLabel()
+
+        self.track_slider = QSlider(Qt.Orientation.Horizontal)
+        self.track_slider.setFixedWidth(int(GetSystemMetrics(1) * SLIDER_WIDTH_PERCENT))
+        self.track_slider.sliderMoved.connect(self.change_track_position)
+
+        self.prev_track_but = QPushButton()
+        self.prev_track_but.setFixedSize(*BUTTON_PLAYER_SIZES)
+        self.prev_track_but.clicked.connect(self.prev)
+
+        self.next_track_but = QPushButton()
+        self.next_track_but.setFixedSize(*BUTTON_PLAYER_SIZES)
+        self.next_track_but.clicked.connect(self.next)
 
         self.play_button = QPushButton()
         self.play_button.setFixedSize(*BUTTON_PLAYER_SIZES)
@@ -60,7 +77,26 @@ class TrackPlayPanel(QFrame):
 
         layout = QHBoxLayout(self)
         layout.addWidget(self.label)
+        layout.addWidget(self.prev_track_but)
         layout.addWidget(self.play_button)
+        layout.addWidget(self.next_track_but)
+        layout.addWidget(self.track_slider)
+        layout.addWidget(self.test_label)
+
+    def prev(self):
+        if self.player.position() != 0:
+            self.player.setPosition(0)
+        else:
+            pass
+
+    def next(self):
+        pass
+
+    def change_track_position(self, pos):
+        self.isNeedMoved = False
+        self.track_slider.setValue(pos)
+        self.player.setPosition(pos * 1000)
+        self.isNeedMoved = True
 
     def stop_track(self):
         if self.isTrackPlayed:
@@ -75,6 +111,11 @@ class TrackPlayPanel(QFrame):
     def change_data(self, meta_data):
         self.isTrackPlayed = True
         self.label.setText(meta_data["name"])
+        self.track_slider.setRange(0, meta_data["duration"])
+
+    def change_slider(self, pos):
+        if self.isNeedMoved:
+            self.track_slider.setValue(pos // 1000)
 
 
 class TracksPanel(QListWidget):
