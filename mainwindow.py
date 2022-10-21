@@ -43,4 +43,4 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.temp)
 
     def change_data(self):
-        self.play_panel.change_data(self.tracks_panel.track_metadata)
+        self.play_panel.change_data()

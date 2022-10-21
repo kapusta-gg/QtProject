@@ -2,15 +2,15 @@ from PyQt6.QtWidgets import QFrame, QPushButton, QVBoxLayout, QFileDialog, QList
 from PyQt6.QtCore import QUrl, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtMultimedia import QMediaPlayer
-from tinytag import TinyTag
-from math import floor
 from win32api import GetSystemMetrics
+from circule_list import CirculeList
 import subprocess
 import os
 
 MAIN_WINDOW_HEIGHT_PERCENT = 0.6
 SLIDER_WIDTH_PERCENT = 0.3
 BUTTON_PLAYER_SIZES = (40, 40)
+METADATA_LIST = CirculeList()
 
 
 class LeftPanel(QFrame):
@@ -84,13 +84,19 @@ class TrackPlayPanel(QFrame):
         layout.addWidget(self.test_label)
 
     def prev(self):
-        if self.player.position() != 0:
+        if self.player.position() // 1000 > 3:
             self.player.setPosition(0)
         else:
-            pass
+            METADATA_LIST.prev()
+            self.player.setSource(QUrl(METADATA_LIST.curr().data["path"]))
+            self.change_data()
+            self.player.play()
 
     def next(self):
-        pass
+        METADATA_LIST.next()
+        self.player.setSource(QUrl(METADATA_LIST.curr().data["path"]))
+        self.change_data()
+        self.player.play()
 
     def change_track_position(self, pos):
         self.isNeedMoved = False
@@ -108,10 +114,10 @@ class TrackPlayPanel(QFrame):
             self.play_button.setIcon(QIcon("stop.png"))
             self.isTrackPlayed = True
 
-    def change_data(self, meta_data):
+    def change_data(self):
         self.isTrackPlayed = True
-        self.label.setText(meta_data["name"])
-        self.track_slider.setRange(0, meta_data["duration"])
+        self.label.setText(METADATA_LIST.curr().data["name"])
+        self.track_slider.setRange(0, METADATA_LIST.curr().data["duration"])
 
     def change_slider(self, pos):
         if self.isNeedMoved:
@@ -129,23 +135,22 @@ class TracksPanel(QListWidget):
         self.itemClicked.connect(self.get_item)
 
     def get_item(self, item):
-        path = os.path.join(".\music", item.text() + ".mp3")
-
-        url = QUrl(path)
-        self.player.setSource(url)
+        while METADATA_LIST.curr() != item.text():
+            METADATA_LIST.next()
+        data = METADATA_LIST.curr().data
+        self.player.setSource(QUrl(data["path"]))
         self.player.play()
 
-        data = TinyTag.get(path)
-        self.track_metadata = {
-            "name": item.text(),
-            "duration": floor(data.duration),
-        }
 
     def list_update(self):
         self.clear()
+        METADATA_LIST.clear()
         for i in os.walk("./music"):
             if i[0] != "./music":
                 continue
             for file in i[2]:
-                self.addItem(file.rstrip('.mp3'))
+                file = file.rstrip('.mp3')
+                self.addItem(file)
+                METADATA_LIST.add(file)
+        print()
 
