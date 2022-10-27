@@ -11,6 +11,8 @@ MAIN_WINDOW_HEIGHT_PERCENT = 0.6
 SLIDER_WIDTH_PERCENT = 0.3
 BUTTON_PLAYER_SIZES = (40, 40)
 METADATA_LIST = CirculeList()
+MILISEC_IN_SEC = 1000
+SEC_IN_MIN = 60
 
 
 class LeftPanel(QFrame):
@@ -55,7 +57,7 @@ class TrackPlayPanel(QFrame):
         self.isNeedMoved = True
 
         self.label = QLabel()
-        self.test_label = QLabel()
+        self.time_played_label = QLabel()
 
         self.track_slider = QSlider(Qt.Orientation.Horizontal)
         self.track_slider.setFixedWidth(int(GetSystemMetrics(1) * SLIDER_WIDTH_PERCENT))
@@ -81,27 +83,28 @@ class TrackPlayPanel(QFrame):
         layout.addWidget(self.play_button)
         layout.addWidget(self.next_track_but)
         layout.addWidget(self.track_slider)
-        layout.addWidget(self.test_label)
+        layout.addWidget(self.time_played_label)
 
     def prev(self):
-        if self.player.position() // 1000 > 3:
+        if self.player.position() // MILISEC_IN_SEC > 3:
             self.player.setPosition(0)
         else:
             METADATA_LIST.prev()
             self.player.setSource(QUrl(METADATA_LIST.curr().data["path"]))
-            self.change_data()
+            self.set_data()
             self.player.play()
 
     def next(self):
         METADATA_LIST.next()
         self.player.setSource(QUrl(METADATA_LIST.curr().data["path"]))
-        self.change_data()
+        self.set_data()
         self.player.play()
 
     def change_track_position(self, pos):
         self.isNeedMoved = False
         self.track_slider.setValue(pos)
-        self.player.setPosition(pos * 1000)
+        self.player.setPosition(pos * MILISEC_IN_SEC)
+        self.set_time_played(pos * MILISEC_IN_SEC)
         self.isNeedMoved = True
 
     def stop_track(self):
@@ -114,14 +117,26 @@ class TrackPlayPanel(QFrame):
             self.play_button.setIcon(QIcon("stop.png"))
             self.isTrackPlayed = True
 
-    def change_data(self):
+    def set_time_played(self, pos):
+        min = pos // MILISEC_IN_SEC // 60
+        sec = pos // MILISEC_IN_SEC
+        if min:
+            sec -= min * SEC_IN_MIN
+        if sec < 10:
+            self.time_played_label.setText(f"{min}:0{sec}")
+        else:
+            self.time_played_label.setText(f"{min}:{sec}")
+
+    def set_data(self):
         self.isTrackPlayed = True
         self.label.setText(METADATA_LIST.curr().data["name"])
         self.track_slider.setRange(0, METADATA_LIST.curr().data["duration"])
+        self.time_played_label.setText("0:00")
 
     def change_slider(self, pos):
         if self.isNeedMoved:
-            self.track_slider.setValue(pos // 1000)
+            self.track_slider.setValue(pos // MILISEC_IN_SEC)
+            self.set_time_played(pos)
 
 
 class TracksPanel(QListWidget):
@@ -141,7 +156,6 @@ class TracksPanel(QListWidget):
         self.player.setSource(QUrl(data["path"]))
         self.player.play()
 
-
     def list_update(self):
         self.clear()
         METADATA_LIST.clear()
@@ -152,5 +166,4 @@ class TracksPanel(QListWidget):
                 file = file.rstrip('.mp3')
                 self.addItem(file)
                 METADATA_LIST.add(file)
-        print()
 

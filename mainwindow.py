@@ -43,4 +43,4 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.temp)
 
     def change_data(self):
-        self.play_panel.change_data()
+        self.play_panel.set_data()
