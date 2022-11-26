@@ -1,18 +1,25 @@
-from PyQt6.QtWidgets import QFrame, QPushButton, QVBoxLayout, QFileDialog, QListWidget, QLabel, QHBoxLayout, QSlider
-from PyQt6.QtCore import QUrl, Qt
-from PyQt6.QtGui import QIcon
-from PyQt6.QtMultimedia import QMediaPlayer
+from PyQt5.QtWidgets import QFrame, QPushButton, QVBoxLayout, QFileDialog, QListWidget, QLabel, QHBoxLayout, QSlider
+from PyQt5.QtCore import QUrl, Qt
+from PyQt5.QtGui import QIcon, QPixmap, QImage
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from win32api import GetSystemMetrics
 from circule_list import CirculeList
 import subprocess
 import os
 
+
+INITIAL_VOLUME = 20
+TRACK_NAME_LABEL_WIDTH = 200
 MAIN_WINDOW_HEIGHT_PERCENT = 0.6
 SLIDER_WIDTH_PERCENT = 0.3
 BUTTON_PLAYER_SIZES = (40, 40)
-METADATA_LIST = CirculeList()
+IMAGE_SIZES = (40, 40)
 MILISEC_IN_SEC = 1000
 SEC_IN_MIN = 60
+VOLUME_RANGE = (0, 100)
+VOLUME_SLIDER_WIDTH = 100
+
+metadata_list = CirculeList()
 
 
 class LeftPanel(QFrame):
@@ -53,52 +60,79 @@ class TrackPlayPanel(QFrame):
         self.setStyleSheet("#player {border:1px solid rgb(0, 0, 0); }")
         self.player = player
         self.player.positionChanged.connect(self.change_slider)
+        self.player.mediaStatusChanged.connect(self.media_status)
         self.isTrackPlayed = False
         self.isNeedMoved = True
 
-        self.label = QLabel()
+        self.track_name_label = QLabel()
+        self.track_name_label.setFixedWidth(TRACK_NAME_LABEL_WIDTH)
+
         self.time_played_label = QLabel()
+
+        self.volume_label = QLabel()
+        volume_img = QPixmap("icons/volume.png")
+        volume_img = volume_img.scaled(*IMAGE_SIZES)
+        self.volume_label.setPixmap(volume_img)
 
         self.track_slider = QSlider(Qt.Orientation.Horizontal)
         self.track_slider.setFixedWidth(int(GetSystemMetrics(1) * SLIDER_WIDTH_PERCENT))
         self.track_slider.sliderMoved.connect(self.change_track_position)
 
-        self.prev_track_but = QPushButton()
-        self.prev_track_but.setFixedSize(*BUTTON_PLAYER_SIZES)
-        self.prev_track_but.clicked.connect(self.prev)
+        self.prev_track_butt = QPushButton()
+        self.prev_track_butt.setFixedSize(*BUTTON_PLAYER_SIZES)
+        self.prev_track_butt.setIcon(QIcon("icons/prev.png"))
+        self.prev_track_butt.clicked.connect(self.prev)
 
-        self.next_track_but = QPushButton()
-        self.next_track_but.setFixedSize(*BUTTON_PLAYER_SIZES)
-        self.next_track_but.clicked.connect(self.next)
+        self.next_track_butt = QPushButton()
+        self.next_track_butt.setFixedSize(*BUTTON_PLAYER_SIZES)
+        self.next_track_butt.setIcon(QIcon("icons/next.png"))
+        self.next_track_butt.clicked.connect(self.next)
 
-        self.play_button = QPushButton()
-        self.play_button.setFixedSize(*BUTTON_PLAYER_SIZES)
-        self.play_button.setIcon(QIcon("stop.png"))
-        self.play_button.clicked.connect(self.stop_track)
+        self.play_butt = QPushButton()
+        self.play_butt.setFixedSize(*BUTTON_PLAYER_SIZES)
+        self.play_butt.setIcon(QIcon("icons/stop.png"))
+        self.play_butt.clicked.connect(self.stop_track)
 
+        self.volume_slider = QSlider(Qt.Orientation.Horizontal)
+        self.volume_slider.setRange(*VOLUME_RANGE)
+        self.volume_slider.setFixedWidth(VOLUME_SLIDER_WIDTH)
+        self.volume_slider.setValue(INITIAL_VOLUME)
+        self.volume_slider.sliderMoved.connect(self.set_volume)
 
         layout = QHBoxLayout(self)
-        layout.addWidget(self.label)
-        layout.addWidget(self.prev_track_but)
-        layout.addWidget(self.play_button)
-        layout.addWidget(self.next_track_but)
+        layout.addWidget(self.track_name_label)
+        layout.addWidget(self.prev_track_butt)
+        layout.addWidget(self.play_butt)
+        layout.addWidget(self.next_track_butt)
         layout.addWidget(self.track_slider)
         layout.addWidget(self.time_played_label)
+        layout.addWidget(self.volume_label)
+        layout.addWidget(self.volume_slider)
+
+    def media_status(self, status):
+        if status == QMediaPlayer.EndOfMedia:
+            self.next()
+
+    def next(self):
+        metadata_list.next()
+        self.player.setMedia(QMediaContent(QUrl.fromLocalFile(metadata_list.curr().data["path"])))
+        self.set_data()
+        self.player.play()
 
     def prev(self):
         if self.player.position() // MILISEC_IN_SEC > 3:
             self.player.setPosition(0)
         else:
-            METADATA_LIST.prev()
-            self.player.setSource(QUrl(METADATA_LIST.curr().data["path"]))
+            metadata_list.prev()
+            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(metadata_list.curr().data["path"])))
             self.set_data()
             self.player.play()
 
-    def next(self):
-        METADATA_LIST.next()
-        self.player.setSource(QUrl(METADATA_LIST.curr().data["path"]))
-        self.set_data()
-        self.player.play()
+    def set_data(self):
+        self.isTrackPlayed = True
+        self.track_name_label.setText(metadata_list.curr().data["name"])
+        self.track_slider.setRange(0, metadata_list.curr().data["duration"])
+        self.time_played_label.setText("0:00")
 
     def change_track_position(self, pos):
         self.isNeedMoved = False
@@ -107,15 +141,10 @@ class TrackPlayPanel(QFrame):
         self.set_time_played(pos * MILISEC_IN_SEC)
         self.isNeedMoved = True
 
-    def stop_track(self):
-        if self.isTrackPlayed:
-            self.player.pause()
-            self.play_button.setIcon(QIcon("play.png"))
-            self.isTrackPlayed = False
-        else:
-            self.player.play()
-            self.play_button.setIcon(QIcon("stop.png"))
-            self.isTrackPlayed = True
+    def change_slider(self, pos):
+        if self.isNeedMoved:
+            self.track_slider.setValue(pos // MILISEC_IN_SEC)
+            self.set_time_played(pos)
 
     def set_time_played(self, pos):
         min = pos // MILISEC_IN_SEC // 60
@@ -127,16 +156,18 @@ class TrackPlayPanel(QFrame):
         else:
             self.time_played_label.setText(f"{min}:{sec}")
 
-    def set_data(self):
-        self.isTrackPlayed = True
-        self.label.setText(METADATA_LIST.curr().data["name"])
-        self.track_slider.setRange(0, METADATA_LIST.curr().data["duration"])
-        self.time_played_label.setText("0:00")
+    def stop_track(self):
+        if self.isTrackPlayed:
+            self.player.pause()
+            self.play_butt.setIcon(QIcon("icons/play.png"))
+            self.isTrackPlayed = False
+        else:
+            self.player.play()
+            self.play_butt.setIcon(QIcon("icons/stop.png"))
+            self.isTrackPlayed = True
 
-    def change_slider(self, pos):
-        if self.isNeedMoved:
-            self.track_slider.setValue(pos // MILISEC_IN_SEC)
-            self.set_time_played(pos)
+    def set_volume(self, pos):
+        self.player.setVolume(pos)
 
 
 class TracksPanel(QListWidget):
@@ -150,20 +181,20 @@ class TracksPanel(QListWidget):
         self.itemClicked.connect(self.get_item)
 
     def get_item(self, item):
-        while METADATA_LIST.curr() != item.text():
-            METADATA_LIST.next()
-        data = METADATA_LIST.curr().data
-        self.player.setSource(QUrl(data["path"]))
+        while metadata_list.curr() != item.text():
+            metadata_list.next()
+        data = metadata_list.curr().data
+        self.player.setMedia(QMediaContent(QUrl.fromLocalFile(data["path"])))
         self.player.play()
 
     def list_update(self):
         self.clear()
-        METADATA_LIST.clear()
+        metadata_list.clear()
         for i in os.walk("./music"):
             if i[0] != "./music":
                 continue
             for file in i[2]:
                 file = file.rstrip('.mp3')
                 self.addItem(file)
-                METADATA_LIST.add(file)
+                metadata_list.add(file)
 

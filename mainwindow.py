@@ -1,7 +1,7 @@
-from PyQt6.QtWidgets import QMainWindow, QHBoxLayout, QWidget, QVBoxLayout
-from PyQt6.QtCore import QSize
-from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-from panels import LeftPanel, TrackPlayPanel, TracksPanel
+from PyQt5.QtWidgets import QMainWindow, QHBoxLayout, QWidget, QVBoxLayout
+from PyQt5.QtCore import QSize
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from panels import LeftPanel, TrackPlayPanel, TracksPanel, INITIAL_VOLUME
 from win32api import GetSystemMetrics
 
 
@@ -17,9 +17,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("QtPlayer")
 
         self.player = QMediaPlayer()
-        self.audioOutput = QAudioOutput()
-        self.player.setAudioOutput(self.audioOutput)
-        self.player.tracksChanged.connect(self.change_data)
+        self.player.mediaChanged.connect(self.change_data)
+        self.player.setVolume(INITIAL_VOLUME)
 
         self.tracks_panel = TracksPanel(self.player)
         self.left_panel = LeftPanel(self.tracks_panel)
