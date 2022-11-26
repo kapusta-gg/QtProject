@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QFrame, QPushButton, QVBoxLayout, QFileDialog, QListWidget, QLabel, QHBoxLayout, QSlider
 from PyQt5.QtCore import QUrl, Qt
-from PyQt5.QtGui import QIcon, QPixmap, QImage
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from win32api import GetSystemMetrics
 from circule_list import CirculeList

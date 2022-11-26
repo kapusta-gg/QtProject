@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QHBoxLayout, QWidget, QVBoxLayout
 from PyQt5.QtCore import QSize
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimedia import QMediaPlayer
 from panels import LeftPanel, TrackPlayPanel, TracksPanel, INITIAL_VOLUME
 from win32api import GetSystemMetrics
 
