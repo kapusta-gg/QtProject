@@ -6,6 +6,7 @@ from win32api import GetSystemMetrics
 from circule_list import CirculeList
 import subprocess
 import os
+import shutil
 
 
 INITIAL_VOLUME = 20
@@ -47,9 +48,9 @@ class LeftPanel(QFrame):
     def add_music(self):
         filename = QFileDialog.getOpenFileName(self, caption="Выберите файл", filter="*.mp3", directory="C:\\")
         try:
-            os.replace(filename[0], os.path.dirname(os.path.abspath(__file__)) + '\music\\' + filename[0].split('/')[-1])
+            shutil.move(filename[0], os.path.dirname(os.path.abspath(__file__)) + '\music\\' + filename[0].split('/')[-1])
         except Exception:
-            pass
+            print('here')
         self.tracks_list.list_update()
 
 
