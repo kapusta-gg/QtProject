@@ -4,7 +4,6 @@ from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from win32api import GetSystemMetrics
 from circule_list import CirculeList
-import subprocess
 import os
 import shutil
 
@@ -42,8 +41,8 @@ class LeftPanel(QFrame):
 
     @staticmethod
     def open_folder():
-        path = os.path.dirname(os.path.abspath(__file__)) + '\music\\here'
-        subprocess.Popen(r'explorer /select,"' + path)
+        path = os.path.dirname(os.path.abspath(__file__)) + '\music'
+        os.system(r"explorer.exe " + path)
 
     def add_music(self):
         filename = QFileDialog.getOpenFileName(self, caption="Выберите файл", filter="*.mp3", directory="C:\\")
